@@ -1,0 +1,212 @@
+---
+title: "Assignment 5 Markdown"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(tidyverse)
+```
+
+##1
+
+$$p_X(x) = \{\alpha \text{ if } x = 1, \beta \text{ if } x = 5, 0 \text{ otherwise} \}$$
+
+$$E(x) = \alpha + 5\beta$$
+
+$$\text{Var}(x) = \alpha + 25\beta - \alpha^2 - 10\alpha\beta - 25\beta^2$$
+
+##2
+
+$$P(U\in[a,b]) = \int_a^b f_X(x)dx = b-a$$
+```{r}
+
+
+set.seed(0)
+
+n<-1000
+
+sample_X<-data.frame(U=runif(n))%>%
+  mutate(X=case_when(
+    (0<=U)&(U<0.25)~1,
+    (0.25<=U)&(U<0.5)~5,
+    (0.5<=U)&(U<=1)~0))%>%
+  pull(X)
+
+```
+
+Creates iid sequence using runif function, which selects n values from uniform distribution. These values are then mapped to the 1 and 5 probabilities using the inequalities below - first 25% map to 1, second 25% to 5, rest to 0.
+
+```{r}
+sample_X_015 = function(alpha,beta,n){
+  sample_X<-data.frame(U=runif(n))%>%
+  mutate(X=case_when(
+    (0<=U)&(U<alpha)~1,
+    (alpha<=U)&(U<beta+alpha)~5,
+    (beta+alpha<=U)&(U<=1)~0))%>%
+  pull(X)
+}
+
+sample = sample_X_015(0.5,0.1,10000)
+sample_avg = mean(sample)
+sample_avg
+```
+$$E(x) = \alpha + 5\beta = 0.5 + 5\times 0.1 = 1$$
+The simulation gets approximately the same expected value. The law of large numbers tells us that, as we increase n, the simulated average shall approach the expected value.
+
+```{r}
+sample_var = var(sample)
+sample_var
+```
+$$\text{Var}(X) = \alpha + 25\beta - \alpha^2 - 10\alpha\beta - 25\beta^2 = 2$$
+```{r}
+
+
+sample_X_2 = function(beta){
+  sample_X<-data.frame(U=runif(100))%>%
+  mutate(X=case_when(
+    (0<=U)&(U<0.1)~1,
+    (0.1<=U)&(U<beta+0.1)~5,
+    (beta+0.1<=U)&(U<=1)~0))%>%
+  pull(X)
+}
+
+betas <- seq(0,0.9,0.01)
+df1 <- data.frame(betas)%>%
+  mutate(samples=map(betas,sample_X_2))%>%
+  mutate(average=map_dbl(samples,mean))
+  
+ggplot(data=df1, aes(x=betas, y=average))+ geom_point()
+
+```
+
+
+
+## 3
+
+$$f_{\mu,\sigma} = \frac{1}{\sigma\sqrt{2\pi}}\text{exp}(-\frac{1}{2}(\frac{x-\mu}{\sigma})^2)$$
+
+```{r}
+x = seq(-4,6,0.01)
+pnorm1 = pnorm(x,mean=1,sd=sqrt(1))
+pnorm2 = pnorm(x,mean=1,sd=sqrt(2))
+pnorm3 = pnorm(x,mean=1,sd=sqrt(3))
+
+qnorm_df = data.frame(x,pnorm1,pnorm2,norm3)%>%
+  pivot_longer(!x,names_to="Variance",values_to="CDF")
+ggplot(data=qnorm_df, aes(x=x, y=CDF, colour=Variance, linetype=Variance))+ geom_line()
+
+```
+See the relationship between the size of the tail and the rate of growth of the quantile function.
+```{r}
+x = seq(0,1,0.01)
+qnorm1 = qnorm(x,mean=1,sd=sqrt(1))
+qnorm2 = qnorm(x,mean=1,sd=sqrt(2))
+qnorm3 = qnorm(x,mean=1,sd=sqrt(3))
+
+norm_df = data.frame(x,qnorm1,qnorm2,qnorm3)%>%
+  pivot_longer(!x,names_to="Variance",values_to="Density")
+ggplot(data=norm_df, aes(x=x, y=Density, colour=Variance))+ geom_line()
+
+```
+
+```{r}
+set.seed(0)
+standardGaussianSample <- rnorm(100)
+mean1Var3GaussianSampleA <- 1 + sqrt(3)*standardGaussianSample
+
+ set.seed(0)
+mean1Var3GaussianSampleB <- rnorm(100, 1, sqrt(3))
+
+all.equal(mean1Var3GaussianSampleA,mean1Var3GaussianSampleB)
+```
+
+```{r}
+x=seq(-5,7,0.1)
+density = dnorm(x,mean=1,sd=sqrt(3))
+
+normframe = data.frame(x,density)
+sampleframe = data.frame(mean1Var3GaussianSampleA)
+
+trueVarPlot <- ggplot()+geom_line(data=normframe, aes(x=x, y=density, colour="blue"))+geom_density(data=sampleframe,aes(x=mean1Var3GaussianSampleA, colour="red"))
+
+
+trueVarPlot#+samplePlot
+```
+
+```{r}
+samplePlot
+```
+
+##4  Binomial
+
+```{r}
+set.seed(0)
+n=50
+p=0.7
+x=seq(1,50)
+binom_df = data.frame(x,pmf=dbinom(x,n,p))
+head(binom_df,3)
+```
+```{r}
+x1=seq(0,50,0.01)
+m=50*0.7
+s=sqrt(50*0.7*(1-0.7))
+
+gaussian_df=data.frame(x1,pdf=dnorm(x1,m,s))
+head(norm_df,3)
+```
+
+```{r}
+colors<-c("Gaussian pdf"="red", "Binomial pmf"="blue")
+fill<-c("Gaussian pdf"="white", "Binomial pmf"="white")
+
+ggplot()+labs(x="x",y="Probability")+theme_bw()+geom_line(data=gaussian_df,aes(x1,y=pdf,color="Gaussian pdf"),size=2)+
+# create plot of Gaussian density
+  geom_col(data=binom_df,aes(x=x,y=pmf,color="Binomial pmf",fill="Binomial pmf"))+
+  scale_color_manual(name = "", values=colors)+
+  scale_fill_manual(name = "", values=fill)+
+  xlim(c(20,50))
+
+```
+# Exponential
+
+```{r}
+my_cdf_exp <- function(x,lambda){
+  if(x<0){
+    return(0)
+  }else{
+  return(1-exp(-lambda*x))
+}}
+
+lambda<-1/2
+map_dbl(.x=seq(-1,4),.f=~my_cdf_exp(x=.x,lambda=lambda))
+```
+
+```{r}
+test_inputs<-seq(-1,10,0.1)
+my_cdf_output<-map_dbl(.x=test_inputs,.f=~my_cdf_exp(x=.x,lambda=lambda))
+inbuilt_cdf_output<-map_dbl(.x=test_inputs,.f=~pexp(q=.x,rate=lambda))
+all.equal(my_cdf_output,inbuilt_cdf_output)
+```
+
+
+```{r}
+ my_quantile_exp <- function(p, lambda){
+     return((-1/lambda)*log(1-p))
+ }
+
+
+test_inputs<-seq(0,1,0.01)
+my_quant_output<-map_dbl(.x=test_inputs,.f=~my_quantile_exp(p=.x,lambda=lambda))
+inbuilt_quant_output<-map_dbl(.x=test_inputs,.f=~qexp(p=.x,rate=lambda))
+all.equal(my_quant_output,inbuilt_quant_output)
+```
+
+# 6 Poisson
+
+
+
+

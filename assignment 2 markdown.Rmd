@@ -1,0 +1,232 @@
+---
+title: "Assignment 2 markdown"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+library(Stat2Data)
+data("Hawks")
+hawksSmall<-drop_na(select(Hawks,Age,Day,Month,Year,CaptureTime,Species,Wing,Weight,Tail))
+```
+##1.1
+
+```{r}
+head(hawksSmall)
+```
+1. Discrete
+2. Categorical
+3. Categorical
+4. Continuous
+5. Continuous 
+
+Issue with that plot is that it is trying to convey too much information with several visual cues, making it messy to read.
+
+## 1.2
+It also has no axes labels or title.
+
+## 1.3
+```{r}
+hist <- ggplot(data=hawksSmall, aes(x=Weight)) + xlab("Weight")
+hist+geom_histogram(binwidth=100)+ylab("Count")
+```
+       )
+This univariate plot maps weight to horizontal position as the aesthetic.
+
+It is bimodal as it has two peaks.
+
+## 1.4
+With adjust= 1:
+```{r}
+hist_tail<-ggplot(data=hawksSmall, aes(x=Tail))+xlab("Tail (mm)")
+hist_tail + geom_density(adjust=1)+ylab("Density")
+```
+With adjust = 0.5:
+```{r}
+hist_tail + geom_density(adjust=0.5)+ylab("Density")
+```
+With adjust = 1 there are fewer peaks, so has lower mode (bimodal). With adjust = 0.5 it becomes trimodal.
+```{r}
+hist_tail_species <- ggplot(data=hawksSmall, aes(x=Tail, color=Species))
+hist_tail_species+geom_density()+theme_bw()+xlab("Tail(mm)") + ylab("Density")
+```
+
+```{r}
+ggplot(data=hawksSmall,aes(x=Tail,y=Species,fill=Species)) + geom_violin() + theme_bw() + xlab("Tail (mm)")
+```
+## 1.5
+
+Aesthetics:
+1. Position to tail
+2. Position to weight
+3. Colour to species
+4. Shape to species
+
+The glyphs are the basic shapes used to represent the species - triangle, square, circle
+
+```{r}
+ggplot(data=hawksSmall, aes(x=Tail, y=Weight, color=Species, shape=Species))+geom_point() + xlab("Tail (mm)") + ylab("Weight (g)")
+
+```
+## 1.6
+```{r}
+plot <- ggplot(data=hawksSmall, aes(x=Tail, y=Weight, color=Species)) + xlab("Tail (mm)") + ylab("Weight (g)") + geom_point() +  facet_wrap(vars(Species)) 
+
+plot + geom_smooth(method="lm")
+```
+Visual cues here are colour and position.
+
+In all the above plots, there appears to be a positive correlation between weights and tail lengths within hawks.
+
+## 2.1
+```{r}
+hSF <- select(filter(hawksSmall, Species=="RT", Weight>=1000) ,Wing,Weight,Tail)
+head(hSF)
+
+```
+
+```{r}
+hawksSmall %>% 
+  filter(Species=="RT", Weight>=1000) %>%
+  select(Wing, Weight, Tail)
+```
+Has 3 variables, those which we chose with the select function. Could communicate by showing the head function or providing a legend table explaining each var.
+Has 398 rows, so 398 observations and cases.
+
+## 2.2
+
+```{r}
+head(arrange(hSF,Wing))
+```
+```{r}
+species_name_full <- c("Cooper’s" , "Red-tailed",  "Sharp-shinned")
+species_code <- c("CH", "RT", "SS")
+spec_names_df <- data.frame(species_code,species_name_full)
+head(spec_names_df)
+```
+```{r}
+spec_names_df <- rename(spec_names_df, Species = species_code)
+hawksFullName <- rename(select(left_join(Hawks, spec_names_df, by="Species"), -Species), Species=species_name_full)
+head(select(hawksFullName, Species,Wing,Weight))
+```
+Type of join doesn't matter here as the relationship between the variables is one to one.
+It would make a difference if there were many names for each code or many codes for each name, or worse, both.
+
+## 2.4
+```{r}
+hawksWithBMI <- Hawks %>% 
+  mutate(bird_BMI = 1000 * Weight/(Wing*Wing)) %>%
+  select(Species, bird_BMI) %>%
+  arrange(desc(bird_BMI))
+head(hawksWithBMI)
+```
+```{r}
+
+ggplot(filter(hawksWithBMI, bird_BMI <= 100), aes(x=bird_BMI, y=Species, fill=Species)) + xlab("Bird BMI") + ylab("Species") + theme_bw() + geom_violin()
+```
+## 2.5
+```{r}
+hawksFullName %>%
+  group_by(Species)%>%
+  summarise(
+    num_rows=n(), mean_wing=mean(Wing,na.rm=TRUE), med_wing=median(Wing,na.rm=TRUE), t_mean_wing=mean(Wing, trim=0.1,na.rm=TRUE), tail_wing_ratio = mean(Wing/Tail,na.rm=TRUE))
+```
+```{r}
+hawksFullName %>%
+  group_by(Species)%>%
+  select(Wing,Weight, Culmen,Hallux,Tail,StandardTail,Tarsus)%>%
+  summarise(
+    across(everything(), ~sum(is.na(.)))
+  )
+
+```
+## 3.1
+
+```{r}
+Hawks %>%
+  summarise(
+    mean_wing = mean(Wing, na.rm=TRUE), t_mean_wing=mean(Wing,na.rm=TRUE,trim=0.1), wing_med= median(Wing, na.rm=TRUE), mean_weight=mean(Weight,na.rm=TRUE), t_mean_weight= mean(Weight,trim=0.1,na.rm=TRUE),Weight_med = median(Weight,na.rm=TRUE))
+
+```
+```{r}
+Hawks %>%
+  group_by(Species)%>%
+  summarise(
+    mean_wing = mean(Wing, na.rm=TRUE), t_mean_wing=mean(Wing,na.rm=TRUE,trim=0.1), wing_med= median(Wing, na.rm=TRUE), mean_weight=mean(Weight,na.rm=TRUE), t_mean_weight= mean(Weight,trim=0.1,na.rm=TRUE),Weight_med = median(Weight,na.rm=TRUE))
+
+```
+## 3.2
+
+
+## 3.3
+
+```{r}
+hal <-Hawks$Hallux
+hal<-hal[!is.na(hal)]
+outlier_val<-100
+num_outliers<-10
+corrupted_hal<-c(hal,rep(outlier_val,times=num_outliers))
+mean(hal)
+mean(corrupted_hal)
+
+
+```
+```{r}
+num_outliers_vect<-seq(0,1000)
+means_vect<-c()
+t_means_vect<-c()
+medians_vect<-c()
+for(num_outliers in num_outliers_vect){
+  corrupted_hal<-c(hal,rep(outlier_val,times=num_outliers))
+  means_vect<-c(means_vect,mean(corrupted_hal))
+  medians_vect<-c(medians_vect,median(corrupted_hal))
+  t_means_vect<-c(t_means_vect,mean(corrupted_hal,trim=0.1))
+}
+
+
+df_means_medians<-data.frame(num_outliers=num_outliers_vect,
+mean=means_vect,t_mean=t_means_vect,
+median=medians_vect)
+
+df_means_medians%>%
+pivot_longer(!num_outliers, names_to = "Estimator", values_to = "Value")%>%
+ggplot(aes(x=num_outliers,color=Estimator,
+linetype=Estimator,y=Value))+
+geom_line()+xlab("Number of outliers")
+
+```
+```{r}
+ggplot(Hawks, aes(x=Species, y=Weight)) + geom_boxplot()
+```
+
+
+```{r}
+num_outliers <- function(sample){
+  sum<-0
+  sample = na.omit(sample)
+  quantiles = quantile(sample, probs=c(0.25,0.75),na.rm=1, names=FALSE)
+  q25<- quantiles[1]
+  q75<-quantiles[2]
+  IQR<- q75-q25
+  for (i in sample){
+    if(i < q25-1.5*IQR){
+      sum=sum+1
+    }
+    else if (i > q75+1.5*IQR){
+      sum=sum+1
+    }
+  }
+  return(sum)
+}
+
+
+Hawks %>% 
+  group_by(Species)%>%
+  summarise(
+    #mean_weight=mean(Weight,na.rm=TRUE)
+    num_outliers_weight=num_outliers(Weight)
+  )
+```
