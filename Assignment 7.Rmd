@@ -1,0 +1,24 @@
+---
+title: "Assignment 7"
+author: "Joe Anderson"
+date: "15/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1
+
+If the sample mean was higher then the width of the confidence interval would stay the same, as both the lower and upper limits are equally dependent on the mean.
+
+If the sample standard deviation was higher then the width would increase.
+If the sample size was higher then the width would decrease.
+
+```{r}
+library(tidyverse)
+library(Stat2Data)
+data("Hawks")
+```
+
