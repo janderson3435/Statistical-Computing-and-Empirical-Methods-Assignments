@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## 1
+## 1: Student’s t-confidence intervals
 
 If the sample mean was higher then the width of the confidence interval would stay the same, as both the lower and upper limits are equally dependent on the mean.
 
@@ -20,5 +20,140 @@ If the sample size was higher then the width would decrease.
 library(tidyverse)
 library(Stat2Data)
 data("Hawks")
+
+weights = pull(Hawks, Weight)
+weights = na.omit(weights)
+alpha<-0.01 # 99% confidence interval
+n<-length(weights)
+t<-qt(1-alpha/2,df=n-1)
+l<-mean(weights)-t/sqrt(n)*sd(weights)
+u<-mean(weights)+t/sqrt(n)*sd(weights)
+c(l,u)
+    
+```
+As this is a one-sample t-test we have assumed that the weights are distributed by a Gaussian.
+```{r}
+ggplot()+geom_density(data=data.frame(weights),aes(x=weights))
+
+ggplot(data=data.frame(weights),aes(sample=weights))+theme_bw()+stat_qq()+stat_qq_line(colour="blue")
+```
+This appears to deviate from the Gaussian assumption, so maybe bootstrap is more appropriate.
+
+## 2: One sample t-test
+```{r}
+library(palmerpenguins)
+
+bill_adelie <- penguins%>%
+  filter(species == "Adelie")%>%
+  pull(bill_length_mm)
+
+bill_adelie <- na.omit(bill_adelie)
+
+# Significance level of 0.01
+t.test(x=bill_adelie, mu=40, conf.level=0.99)
+```
+P value much smaller than 0.01, so reject null hypothesis and conclude that beak mean is not 40mm
+Again assuming Gaussian and iid. 
+
+##3: Implementing a one-sample t-test
+```{r}
+
+oneSampleT<-function(samples, mu){
+  sample_mean <- mean(samples)
+  sample_sd <- sd(samples)
+  n <- length(samples)
+  t <- (sample_mean - mu)/(sample_sd/sqrt(n))
+  p <- 2*(1-pt(abs(t),df=n-1))
+  return(p)
+}
+
+oneSampleT(bill_adelie,40)
+```
+##4: The paired t-test
+```{r}
+library(PairedData)
+data("Barley")
+
+t.test(x=pull(Barley,Glabron), y=pull(Barley,Velvet), paired=TRUE, conf.level=0.01)
+```
+p value greater than significance level, therefore accept null hypothesis, so true difference in mean is equal to 0.
+
+```{r}
+# Cohen's d
+diffs <- pull(Barley,Glabron)-pull(Barley,Velvet)
+s <- sd(diffs)
+y_bar <- mean(diffs)
+effect_size <- y_bar/s
+effect_size
+```
+
+Assume that the differences are distribute normally for the paired case. Plot to see if justified:
+
+```{r}
+ggplot()+geom_density(data=data.frame(diffs),aes(x=diffs))
+
+ggplot(data=data.frame(diffs),aes(sample=diffs))+theme_bw()+stat_qq()+stat_qq_line(colour="blue")
+```
+
+Appears to be a skewed Gaussian.
+
+#5: Investigating coverage for Student's t intervals
+```{r}
+student_t_confidence_interval<-function(sample,confidence_level){
+  sample<-sample[!is.na(sample)] # remove any missing values
+  n<-length(sample) # compute sample size
+  mu_est<-mean(sample) # compute sample mean
+  sig_est<-sd(sample) # compute sample sd
+  alpha = 1-confidence_level # alpha from gamma
+  t<-qt(1-alpha/2,df=n-1) # get student t quantile
+  l=mu_est-(t/sqrt(n))*sig_est # lower
+  u=mu_est+(t/sqrt(n))*sig_est # upper
+  return(c(l,u))
+}
+
+num_trials<-100000
+sample_size<-30
+mu_0<-1
+sigma_0<-3
+alpha<-0.05
+set.seed(0) # set random seed for reproducibility
+single_alpha_coverage_simulation_df<-data.frame(trial=seq(num_trials))%>%
+mutate(sample=map(.x=trial,.f=~rnorm(n=sample_size,mean=mu_0,sd=sigma_0)))%>%
+# generate random Gaussian samples
+mutate(ci_interval=map(.x=sample,.f=~student_t_confidence_interval(.x,1-alpha)))%>%
+# generate confidence intervals
+mutate(cover=map_lgl(.x=ci_interval,.f=~((min(.x)<=mu_0)&(max(.x)>=mu_0))))%>%
+# check if interval covers mu_0
+mutate(ci_length=map_dbl(.x=ci_interval, .f=~(max(.x)-min(.x))))
+# compute interval length
+single_alpha_coverage_simulation_df%>%
+pull(cover)%>%
+mean() # estimate of coverage probability
+```
+```{r}
+num_trials<-100000
+sample_size<-30
+mu_0<-1
+sigma_0<-3
+alpha<-seq(0,1,0.01)
+sample=rnorm(n=sample_size,mean=mu_0,sd=sigma_0)
+
+alpha_coverage_simulation_df<-data.frame(alpha)%>%
+# generate random Gaussian samples
+mutate(ci_interval=map(.x=alpha,.f=~student_t_confidence_interval(sample,1-.x)))%>%
+# generate confidence intervals
+mutate(cover=map_lgl(.x=ci_interval,.f=~((min(.x)<=mu_0)&(max(.x)>=mu_0))))%>%
+# check if interval covers mu_0
+mutate(ci_length=map_dbl(.x=ci_interval, .f=~(max(.x)-min(.x))))
+# compute interval length
+alpha_coverage_simulation_df%>%
+pull(cover)%>%
+mean() # estimate of coverage probability
+
+head(alpha_coverage_simulation_df)
+ggplot(data=alpha_coverage_simulation_df, aes(x=1-alpha,y=cover)) + geom_line()
+```
+```{r}
+ggplot(data=alpha_coverage_simulation_df, aes(x=1-alpha, y=ci_length)) + geom_line()
 ```
 
