@@ -1,0 +1,62 @@
+---
+title: "Assignment 8"
+author: "Joe Anderson"
+date: "22/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## 1
+
+#### 1 
+Measurement distortions are where we fail to take a measurement that accurately describes the aspect we intend to measure. Sometimes it is not possible to directly measure the aspect, so we take a proxy measurement that correlates with the true variable. An example of this is the use of tests to measure intelligence. Measurement distortions can also be due to errors in the measurement itself e.g faulty instruments.
+
+#### 2 
+Selection bias is where the sample does not represent the population, so sample stats gathered are biased in some way. E.g when assessing average height of a town, only using the town's rugby team in a sample.
+
+#### 3
+Confounding variables obscure causal relationships, as they may be the reason for a correlation. E.g is longevity a result of healthy eating, or are both a result of wealth?
+
+## 2
+
+```{r}
+library(tidyverse)
+library(Stat2Data)
+library(palmerpenguins)
+
+peng_AC<-penguins%>%
+  drop_na(species,body_mass_g)%>%
+  filter(species!="Gentoo")
+
+```
+
+```{r}
+t_test_function <- function(data, val_col, group_col){
+  group <- split(data, f = data[group_col])
+  
+  adelie <- data.frame(group[1]$Adelie)
+  chinstrap <- data.frame(group[2]$Chinstrap)
+  
+  print(chinstrap)
+  a_sample_mean <- mean(adelie[val_col])
+  a_sample_var <- var(adelie[val_col])
+  a_sammple_size <- length(adelie[val_col])
+  
+  c_sample_mean <- mean(chinstrap[val_col])
+  c_sample_var <- var(chinstrap[val_col])
+  c_sammple_size <- length(chinstrap[val_col])
+  
+  sd_combined <- sqrt()
+  t <- (a_sample_mean -c_sample_mean)/
+  p <- 12
+  return(t,p,es)
+}
+
+t_test_function(data=peng_AC,val_col="body_mass_g",group_col="species")
+
+```
+
