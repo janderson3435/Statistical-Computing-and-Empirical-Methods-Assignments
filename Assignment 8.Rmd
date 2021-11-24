@@ -6,19 +6,19 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
 
 ## 1
 
-#### 1 
+#### a. 
 Measurement distortions are where we fail to take a measurement that accurately describes the aspect we intend to measure. Sometimes it is not possible to directly measure the aspect, so we take a proxy measurement that correlates with the true variable. An example of this is the use of tests to measure intelligence. Measurement distortions can also be due to errors in the measurement itself e.g faulty instruments.
 
-#### 2 
+#### b. 
 Selection bias is where the sample does not represent the population, so sample stats gathered are biased in some way. E.g when assessing average height of a town, only using the town's rugby team in a sample.
 
-#### 3
+#### c.
 Confounding variables obscure causal relationships, as they may be the reason for a correlation. E.g is longevity a result of healthy eating, or are both a result of wealth?
 
 ## 2
@@ -28,35 +28,36 @@ library(tidyverse)
 library(Stat2Data)
 library(palmerpenguins)
 
-peng_AC<-penguins%>%
-  drop_na(species,body_mass_g)%>%
-  filter(species!="Gentoo")
+peng_AC <- penguins %>%
+  drop_na(species, body_mass_g) %>%
+  filter(species != "Gentoo")
 
 ```
 
 ```{r}
-t_test_function <- function(data, val_col, group_col){
+t_test_function <- function(data, val_col, group_col) {
   group <- split(data, f = data[group_col])
-  
-  adelie <- data.frame(group[1]$Adelie)
-  chinstrap <- data.frame(group[2]$Chinstrap)
-  
-  print(chinstrap)
-  a_sample_mean <- mean(adelie[val_col])
-  a_sample_var <- var(adelie[val_col])
-  a_sammple_size <- length(adelie[val_col])
-  
-  c_sample_mean <- mean(chinstrap[val_col])
-  c_sample_var <- var(chinstrap[val_col])
-  c_sammple_size <- length(chinstrap[val_col])
-  
-  sd_combined <- sqrt()
-  t <- (a_sample_mean -c_sample_mean)/
-  p <- 12
-  return(t,p,es)
+
+  g1 <- filter(data, group_col == "Adelie")
+  g2 <- filter(data, group_col == "Chinstrap")
+
+  m0 <- mean(pull(g1, val_col))
+  sd0 <- sd(pull(g1, val_col))
+  n0 <- length(pull(g1, val_col))
+
+  m1 <- mean(pull(g2, val_col))
+  sd1 <- sd(pull(g2, val_col))
+  n1 <- length(pull(g2, val_col))
+
+  sd01 <- sqrt((n0 - 1) * sd0^2 + (n1 - 1) * sd1^2) / (n0 + n1 - 2)
+  t <- (m0 - m1) / (sd01 * sqrt((1 / n0) + (1 / n1)))
+  p <- -2 * (1 - pt(abs(t), df = n0 + n1 - 2))
+
+  effect_size <- (m0 - m1) / sd01
+
+  return(c(t, p, effect_size))
 }
 
-t_test_function(data=peng_AC,val_col="body_mass_g",group_col="species")
-
+t_test_function(data = peng_AC, val_col = "body_mass_g", group_col = "species")
 ```
 
